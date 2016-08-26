@@ -1,23 +1,19 @@
 package tel.schich.yearreducation
 
-import java.time.{Instant, LocalDate}
+import java.time.Instant.now
+import java.time.ZoneId
 
-import dispatch.Http
-import tel.schich.yearreducation.BlockerSource.daysOfYear
-import tel.schich.yearreducation.sources.{EuropaParkSeason, ICalSource, SmartnoobApi, Weekends}
+import play.api.libs.json.Json.parse
+import tel.schich.yearreducation.sources._
 
-import scala.concurrent.Future
-import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Await
+import scala.io.Source.fromFile
 import scala.io.StdIn
-import scala.util.Failure
+import scala.concurrent.duration.Duration
 
-/**
-  * Created by phillip on 25.08.16.
-  */
 object Main extends App {
 
-
-    def schulferienorg(land: String, file: String, year: Int) = s"http://www.schulferien.org/media/ical/$land/${file}_$year.ics"
+    val timeZone = ZoneId.of("Europe/Berlin")
 
     val year =
         try {
@@ -25,39 +21,30 @@ object Main extends App {
             else StdIn.readLine("Year: ").toInt
         } catch {
             case _: NumberFormatException =>
-                Instant.now().atZone(SmartnoobApi.GermanTimeZone).getYear
+                now().atZone(timeZone).getYear
         }
 
     println(s"Using year $year!")
 
     val blockerSources = Seq(
-        SmartnoobApi,
         EuropaParkSeason,
         Weekends,
-        new ICalSource(schulferienorg("frankreich", "ferien_strassburg", year)),
-        new ICalSource(schulferienorg("frankreich", "feiertage", year)),
-        new ICalSource(schulferienorg("schweiz", "feiertage", year)),
-        new ICalSource(schulferienorg("schweiz", "ferien_basel-stadt_alle-schulen", year))
+        new SchulferienOrg(parse(fromFile("locations.json").mkString).as[Map[String, Seq[String]]], timeZone)
     )
 
-    def findBlockers(blockers: Seq[Blocker])(date: LocalDate): List[String] = {
-        blockers.foldLeft(List.empty[String]) {(names, b) =>
-            if (b.isWithin(date)) b.name :: names
-            else names
-        }
-    }
+    val days = Await.result(Reduce.annotate(year, blockerSources, includePreviousYear = true), Duration.Inf)
 
-    Future.sequence(blockerSources.map(_.retrieveBlockers(year))).map { blockers =>
-        val blockedBy: (LocalDate) => List[String] = findBlockers(blockers.flatten)
-
-        daysOfYear(year) map { d => (d, blockedBy(d)) } /*filter(_._2.isEmpty)*/ foreach println
-    }.onComplete {t =>
-        t match {
-            case Failure(e) =>
-                println(e)
-            case _ =>
-        }
-        Http.shutdown()
+    days foreach {case (day, blockers) =>
+        val blockerNames =
+            if (blockers.isEmpty) "Free"
+            else {
+                val names = blockers.map(_.name).take(4)
+                val delta = blockers.length - names.length
+                if (delta > 0) {
+                    names.mkString(", ") + s", +$delta"
+                } else names.mkString(", ")
+            }
+        println(s"$day: $blockerNames")
     }
 
 }

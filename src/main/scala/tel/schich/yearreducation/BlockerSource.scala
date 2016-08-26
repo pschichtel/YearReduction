@@ -1,8 +1,9 @@
 package tel.schich.yearreducation
 
-import java.time.LocalDate
+import java.time.{LocalDate, ZoneId}
 import java.time.LocalDate._
 import java.time.temporal.ChronoUnit._
+import java.util.TimeZone
 
 import com.ning.http.client.Response
 import play.api.libs.json.Json.parse
@@ -16,6 +17,8 @@ trait BlockerSource {
 }
 
 object BlockerSource {
+
+    val DefaultZoneId = ZoneId.of(TimeZone.getDefault.getID)
 
     def as[A](response: Response)(implicit reads: Reads[A]): Option[A] = {
         (dispatch.as.String andThen parse andThen reads.reads)(response) match {
@@ -32,7 +35,4 @@ object BlockerSource {
         dispatchFuture.onComplete(promise.complete)
         promise.future
     }
-
-    def daysFrom(start: LocalDate): Stream[LocalDate] = start #:: daysFrom(start).map(_.plus(1, DAYS))
-    def daysOfYear(year: Int): Stream[LocalDate] = daysFrom(ofYearDay(year, 1)).takeWhile(_.getYear == year)
 }

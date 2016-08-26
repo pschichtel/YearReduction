@@ -2,10 +2,11 @@ package tel.schich.yearreducation.sources
 
 import java.time.Instant.ofEpochSecond
 import java.time.ZoneId
+import java.util.TimeZone
 
 import dispatch.{Http, Req, url}
 import play.api.libs.json.Json.reads
-import tel.schich.yearreducation.BlockerSource.{as, toScala}
+import tel.schich.yearreducation.BlockerSource.{DefaultZoneId, as, toScala}
 import tel.schich.yearreducation.{Blocker, BlockerSource}
 
 import scala.concurrent.Future.sequence
@@ -15,10 +16,8 @@ import scala.concurrent.Future
 /**
   * Created by phillip on 25.08.16.
   */
-object SmartnoobApi extends BlockerSource {
+class SmartnoobApi(states: Seq[String] = SmartnoobApi.AllStates, timeZoneId: ZoneId = DefaultZoneId) extends BlockerSource {
 
-    val AllStates = Seq("BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH")
-    val GermanTimeZone = ZoneId.of("Europe/Berlin")
     val SmartnoobBase = "http://api.smartnoob.de/ferien/v1"
 
     object Holydays {
@@ -34,15 +33,15 @@ object SmartnoobApi extends BlockerSource {
 
 
     override def retrieveBlockers(year: Int): Future[Seq[Blocker]] = {
-        val schoolHolidays = AllStates.map(s => germanSchoolHolidaysFor(s, year)) :+ allGermanHolidaysFor(year)
+        val schoolHolidays = states.map(s => germanSchoolHolidaysFor(s, year)) :+ allGermanHolidaysFor(year)
 
         sequence(schoolHolidays).map { responses =>
 
             responses.collect({case Some(r) => r}).flatMap {response =>
                 response.daten.map {data =>
                     Blocker(data.title,
-                        ofEpochSecond(data.beginn).atZone(GermanTimeZone).toLocalDate,
-                        ofEpochSecond(data.ende).atZone(GermanTimeZone).toLocalDate)
+                        ofEpochSecond(data.beginn).atZone(timeZoneId).toLocalDate,
+                        ofEpochSecond(data.ende).atZone(timeZoneId).toLocalDate)
                 }
             }
 
@@ -57,4 +56,8 @@ object SmartnoobApi extends BlockerSource {
 
     private def allGermanHolidaysFor(year: Int) =
         responseFor(url(s"$SmartnoobBase/feiertage/?bundesland=DE&jahr=$year"))
+}
+
+object SmartnoobApi {
+    val AllStates = Seq("BW", "BY", "BE", "BB", "HB", "HH", "HE", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH")
 }

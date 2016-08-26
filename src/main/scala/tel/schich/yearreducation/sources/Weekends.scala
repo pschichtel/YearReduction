@@ -3,7 +3,7 @@ package tel.schich.yearreducation.sources
 import java.time.DayOfWeek.{SATURDAY, SUNDAY}
 import java.time.temporal.ChronoUnit.DAYS
 
-import tel.schich.yearreducation.BlockerSource.daysOfYear
+import tel.schich.yearreducation.Reduce.daysOfYear
 import tel.schich.yearreducation.{Blocker, BlockerSource}
 
 import scala.concurrent.Future
