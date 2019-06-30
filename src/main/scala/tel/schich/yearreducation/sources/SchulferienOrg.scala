@@ -23,5 +23,5 @@ class SchulferienOrg(locations: Map[String, Seq[String]], timeZoneId: ZoneId = D
 }
 
 object SchulferienOrg {
-    def mkLink(land: String, file: String, year: Int) = s"http://www.schulferien.org/media/ical/$land/${file}_$year.ics"
+    def mkLink(land: String, file: String, year: Int) = s"https://www.schulferien.org/media/ical/$land/${file}_$year.ics"
 }

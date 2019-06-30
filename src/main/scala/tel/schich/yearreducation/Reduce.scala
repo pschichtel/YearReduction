@@ -4,8 +4,6 @@ import java.time.LocalDate
 import java.time.LocalDate._
 import java.time.temporal.ChronoUnit._
 
-import dispatch.Http
-
 import scala.concurrent.Future
 import scala.concurrent.Future.sequence
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -29,13 +27,10 @@ object Reduce {
             daysOfThisYear.map {day => (day, findBlockers(blockers, day))}
         }
 
-        annotatedYear.onComplete {t =>
-            t match {
-                case Failure(e) =>
-                    println(e)
-                case _ =>
-            }
-            Http.shutdown()
+        annotatedYear.onComplete {
+            case Failure(e) =>
+                println(e)
+            case _ =>
         }
 
         annotatedYear

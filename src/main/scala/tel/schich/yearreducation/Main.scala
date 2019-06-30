@@ -26,11 +26,14 @@ object Main extends App {
 
     println(s"Using year $year!")
 
+    private val locationsSource = fromFile("locations.json")
     val blockerSources = Seq(
         EuropaParkSeason,
         Weekends,
-        new SchulferienOrg(parse(fromFile("locations.json").mkString).as[Map[String, Seq[String]]], timeZone)
+        InThePast,
+        new SchulferienOrg(parse(locationsSource.mkString).as[Map[String, Seq[String]]], timeZone)
     )
+    locationsSource.close()
 
     val days = Await.result(Reduce.annotate(year, blockerSources, includePreviousYear = true), Duration.Inf)
 
