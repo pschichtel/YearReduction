@@ -2,7 +2,7 @@ name := "YearReduction"
 
 version := "1.0"
 
-scalaVersion := "2.13.0"
+scalaVersion := "2.13.15"
 
 libraryDependencies ++= Seq(
     "com.softwaremill.sttp" %% "core" % "1.6.0",
